@@ -205,21 +205,37 @@ def plot_results(model, X_test, y_test, feature_names: list, save_path: str = "r
     print(f"\nResults saved to {save_path}/model_results.png")
 
 
-def cross_validate_model(model, X, y) -> None:
+def cross_validate_model(X, y) -> None:
     """Perform cross-validation."""
     print("\n" + "="*50)
     print("CROSS-VALIDATION (5-Fold)")
     print("="*50)
 
+    # Create a fresh model without early stopping for cross-validation
+    cv_model = xgb.XGBClassifier(
+        n_estimators=100,
+        max_depth=6,
+        learning_rate=0.1,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        min_child_weight=3,
+        gamma=0.1,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
+        random_state=42,
+        eval_metric='logloss',
+        n_jobs=-1
+    )
+
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-    cv_scores = cross_val_score(model, X, y, cv=cv, scoring='accuracy')
+    cv_scores = cross_val_score(cv_model, X, y, cv=cv, scoring='accuracy')
     print(f"CV Accuracy: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
 
-    cv_f1 = cross_val_score(model, X, y, cv=cv, scoring='f1')
+    cv_f1 = cross_val_score(cv_model, X, y, cv=cv, scoring='f1')
     print(f"CV F1-Score: {cv_f1.mean():.4f} (+/- {cv_f1.std() * 2:.4f})")
 
-    cv_auc = cross_val_score(model, X, y, cv=cv, scoring='roc_auc')
+    cv_auc = cross_val_score(cv_model, X, y, cv=cv, scoring='roc_auc')
     print(f"CV ROC-AUC: {cv_auc.mean():.4f} (+/- {cv_auc.std() * 2:.4f})")
 
 
@@ -283,7 +299,7 @@ def main():
     metrics = evaluate_model(model, X_test, y_test, feature_names)
 
     # Cross-validation
-    cross_validate_model(model, X, y)
+    cross_validate_model(X, y)
 
     # Plot results
     plot_results(model, X_test, y_test, feature_names)
